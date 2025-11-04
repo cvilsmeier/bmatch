@@ -1,6 +1,8 @@
 package bmatch
 
 import (
+	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -104,4 +106,45 @@ func TestMatcher(t *testing.T) {
 		is.false(m.Match("10:06 TRACE(sql) UPDATE sessions SET lastAccess=? WHERE id=?"))
 		is.true(m.Match("11:00 DEBUG will poll now"))
 	})
+}
+
+const randomText = "Cause dried no solid no an small so still widen. Ten weather evident smiling bed against she examine its. Rendered far opinions two yet moderate sex striking. Sufficient motionless compliment by stimulated assistance at. Convinced resolving extensive agreeable in it on as remainder. Cordially say affection met who propriety him. Are man she towards private weather pleased. In more part he lose need so want rank no. At bringing or he sensible pleasure. Prevent he parlors do waiting be females an message society."
+const randomTextWithOscarPeterson = "Cause dried no solid no Peterson an small so still widen. Ten weather evident smiling bed against she examine its. Rendered far opinions two yet moderate sex striking. Sufficient motionless compliment by stimulated assistance at. Convinced resolving extensive agreeable in it on as remainder. Cordially say affection met who propriety him. Are man she towards private weather pleased. In more part he lose need so want rank no. At bringing or Oscar he sensible pleasure. Prevent he parlors do waiting Oscar Peterson be females an message society."
+
+func BenchmarkStringsContains(b *testing.B) {
+	const expr = "Oscar Peterson"
+	for i := 0; i < b.N; i++ {
+		if strings.Contains(randomText, expr) {
+			b.Fatalf("must not match")
+		}
+		if !strings.Contains(randomTextWithOscarPeterson, expr) {
+			b.Fatalf("must match")
+		}
+	}
+}
+
+func BenchmarkRegexpMatch(b *testing.B) {
+	const expr = "Oscar Peterson"
+	rex := regexp.MustCompile(expr)
+	for i := 0; i < b.N; i++ {
+		if rex.MatchString(randomText) {
+			b.Fatalf("must not match")
+		}
+		if !rex.MatchString(randomTextWithOscarPeterson) {
+			b.Fatalf("must match")
+		}
+	}
+}
+
+func BenchmarkBmatchMatch(b *testing.B) {
+	const expr = "/Oscar Peterson/"
+	matcher := MustCompile(expr)
+	for i := 0; i < b.N; i++ {
+		if matcher.Match(randomText) {
+			b.Fatalf("must not match")
+		}
+		if !matcher.Match(randomTextWithOscarPeterson) {
+			b.Fatalf("must match")
+		}
+	}
 }

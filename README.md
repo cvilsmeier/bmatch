@@ -1,5 +1,9 @@
 # bmatch
 
+[![GoDoc Reference](https://pkg.go.dev/badge/github.com/cvilsmeier/bmatch)](http://godoc.org/github.com/cvilsmeier/bmatch)
+[![Build Status](https://github.com/cvilsmeier/bmatch/actions/workflows/build.yml/badge.svg)](https://github.com/cvilsmeier/bmatch/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Bmatch is a Go (golang) string matching package and command line tool
 that supports grouping and boolean expressions:
 
@@ -41,27 +45,29 @@ func main() {
 
 ## Install bmatch command line tool
 
-    $ go install github.com/cvilsmeier/bmatch/cmd/bmatch@latest
+~~~
+$ go install github.com/cvilsmeier/bmatch/cmd/bmatch@latest
+~~~
 
-Show help:
+~~~
+$ bmatch --help
+bmatch - a string matcher with grouping and boolean expressions
 
-    $ bmatch --help
-    bmatch - a string matcher with grouping and boolean expressions
+Usage:
 
-    Usage:
+    bmatch [flags] expr [file]...
 
-        bmatch [flags] expr [file]...
+    Bmatch reads the given files and prints matching lines.
+    If no files are given, it reads stdin.
 
-        Bmatch reads the given files and prints matching lines.
-        If no files are given, it reads stdin.
+Flags:
 
-    Flags:
-
-        -explain
-                Print expression tree and exit.
-                Useful for hunting down shell escaping issues.
-        -help
-                Print this help page and exit
+    -explain
+            Print expression tree and exit.
+            Useful for hunting down shell escaping issues.
+    -help
+            Print this help page and exit
+~~~
 
 
 ## License

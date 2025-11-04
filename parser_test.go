@@ -10,7 +10,7 @@ func TestParse(t *testing.T) {
 		input string
 		want  string
 	}
-	is := Assert(t)
+	is := assert(t)
 	for _, tt := range []testcase{
 		// the empty expression
 		{"", ""},
@@ -92,20 +92,20 @@ func TestParse(t *testing.T) {
 		want := strings.TrimSpace(tt.want)
 		if strings.HasPrefix(want, "err: ") {
 			if err == nil {
-				is.Failf("testcase '%s': want err but was ok", tt.input)
+				is.failf("testcase '%s': want err but was ok", tt.input)
 			}
 			want := want[5:]
 			have := err.Error()
 			if have != want {
-				is.Failf("testcase '%s'\nwant error '%s'\nhave error '%s'", tt.input, want, have)
+				is.failf("testcase '%s'\nwant error '%s'\nhave error '%s'", tt.input, want, have)
 			}
 		} else {
 			if err != nil {
-				is.Failf("testcase '%s': want ok but have error %s", tt.input, err)
+				is.failf("testcase '%s': want ok but have error %s", tt.input, err)
 			}
 			have := dumpNode(0, node)
 			if have != want {
-				is.Failf("testcase '%s'\nwant %q\nhave %q", tt.input, want, have)
+				is.failf("testcase '%s'\nwant %q\nhave %q", tt.input, want, have)
 			}
 		}
 	}

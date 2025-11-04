@@ -1,13 +1,14 @@
 package main
 
 import (
-	"bmatch"
 	"bufio"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/cvilsmeier/bmatch"
 )
 
 func usage() {

@@ -1,8 +1,9 @@
 package main
 
 import (
-	"bmatch"
 	"fmt"
+
+	"github.com/cvilsmeier/bmatch"
 )
 
 func main() {

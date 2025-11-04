@@ -62,7 +62,7 @@ func TestStringLexer(t *testing.T) {
 		{"combi_07", "(/a/ OR /b/) AND ( /c/ AND NOT /d/ )", "       (,/a/,OR,/b/,),AND,(,/c/,AND,NOT,/d/,),EOF"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			is := Assert(t)
+			is := assert(t)
 
 			lex, err := newStringLexer(tt.input)
 			want := strings.TrimSpace(tt.want)
@@ -73,7 +73,7 @@ func TestStringLexer(t *testing.T) {
 				have = collectAndDump(lex)
 			}
 			if have != want {
-				is.Eq(want, have)
+				is.eq(want, have)
 			}
 		})
 	}

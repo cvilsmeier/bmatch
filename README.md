@@ -24,19 +24,12 @@ The operator precedence is the same as in C (the programming language):
     - OR    <-- lowest precedence
 
 
-## Usage as library
+## Usage
 
-    $ go get github.com/cvilsmeier/bmatch@latest
+    $ go get github.com/cvilsmeier/bmatch
 
 
 ```go
-package main
-
-import (
-	"bmatch"
-	"fmt"
-)
-
 func main() {
 	matcher := bmatch.MustCompile("/debug/ OR ( /trace/ AND NOT /trace.*sql/ )")
 	fmt.Println(matcher.Match("debug some"))     // true
@@ -46,12 +39,13 @@ func main() {
 ```
 
 
-## Install as command line tool
+## Install bmatch command line tool
 
-    $ go install github.com/cvilsmeier/bmatch/cmd@latest
-    
+    $ go install github.com/cvilsmeier/bmatch/cmd/bmatch@latest
+
+Show help:
+
     $ bmatch --help
-    
     bmatch - a string matcher with grouping and boolean expressions
 
     Usage:

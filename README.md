@@ -11,7 +11,7 @@ that supports grouping and boolean expressions:
 
 The expression syntax is:
 
-    expr        := literalExpr | groupExpr | boolExpr
+    expr        := literal | groupExpr | boolExpr
     groupExpr   := "(" expr ")"
     boolExpr    := not | and | or
     notExpr     := "NOT" expr

@@ -5,7 +5,7 @@ import (
 	"slices"
 )
 
-// parse parses input tokens and builds an abstract syntax tree.
+// Parse input tokens and build an abstract syntax tree.
 // It's a L-R parser with a one-token lookahead.
 func parse(lex lexer) (node, error) {
 	stack := &stack{nil}

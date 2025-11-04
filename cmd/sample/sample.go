@@ -1,3 +1,4 @@
+// Cmd sample shows how to use the bmatch package.
 package main
 
 import (

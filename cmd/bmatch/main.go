@@ -1,3 +1,4 @@
+// Cmd bmatch is a string matching tool with boolean expressions.
 package main
 
 import (

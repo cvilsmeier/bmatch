@@ -58,56 +58,67 @@ type stringLexer struct {
 
 func newStringLexer(input string) (*stringLexer, error) {
 	var tokens []token
-	var rbuf runeBuffer
+	var rbuf rstack
+	var inEscape bool
 	var inLiteral bool
 	var inOperator bool
 	for _, r := range input {
-		if inLiteral {
-			// TODO allow escaped "/" characters in literal
-			if r == '/' {
-				inLiteral = false
-				text := rbuf.getAndReset()
-				tokens = append(tokens, token{ttLiteral, text})
-			} else {
-				rbuf.add(r)
+		if inEscape {
+			rbuf.push(r)
+			switch r {
+			case '/':
+				inEscape = false
+			default:
+				return nil, fmt.Errorf("invalid escape sequence in %q", rbuf.pop())
 			}
-			continue // with next rune
-		}
-		if inOperator {
-			if r == ' ' || r == '(' || r == ')' || r == '/' {
-				inOperator = false
-				text := rbuf.getAndReset()
-				switch text {
-				case "NOT":
-					tokens = append(tokens, token{ttNot, ""})
-				case "AND":
-					tokens = append(tokens, token{ttAnd, ""})
-				case "OR":
-					tokens = append(tokens, token{ttOr, ""})
-				default:
-					return nil, fmt.Errorf("bad operator %q", text)
+		} else if inLiteral {
+			switch r {
+			case '/':
+				inLiteral = false
+				tokens = append(tokens, token{ttLiteral, rbuf.pop()})
+			case '\\':
+				inEscape = true
+			default:
+				rbuf.push(r)
+			}
+		} else {
+			if inOperator {
+				switch r {
+				case ' ', '(', ')', '/':
+					inOperator = false
+					text := rbuf.pop()
+					switch text {
+					case "NOT":
+						tokens = append(tokens, token{ttNot, ""})
+					case "AND":
+						tokens = append(tokens, token{ttAnd, ""})
+					case "OR":
+						tokens = append(tokens, token{ttOr, ""})
+					default:
+						return nil, fmt.Errorf("unknown operator %q", text)
+					}
 				}
 			}
-		}
-		switch r {
-		case ' ':
-			// ignore space
-		case '(':
-			tokens = append(tokens, token{ttOpen, ""})
-		case ')':
-			tokens = append(tokens, token{ttClose, ""})
-		case '/':
-			inLiteral = true
-		default:
-			rbuf.add(r)
-			inOperator = true
+			switch r {
+			case ' ':
+				// space character are separators but carry no meaning
+			case '(':
+				tokens = append(tokens, token{ttOpen, ""})
+			case ')':
+				tokens = append(tokens, token{ttClose, ""})
+			case '/':
+				inLiteral = true
+			default:
+				rbuf.push(r)
+				inOperator = true
+			}
 		}
 	}
 	if inLiteral {
 		return nil, fmt.Errorf("unclosed literal")
 	}
 	if inOperator {
-		text := rbuf.getAndReset()
+		text := rbuf.pop()
 		switch text {
 		case "NOT":
 			tokens = append(tokens, token{ttNot, ""})
@@ -116,7 +127,7 @@ func newStringLexer(input string) (*stringLexer, error) {
 		case "OR":
 			tokens = append(tokens, token{ttOr, ""})
 		default:
-			return nil, fmt.Errorf("bad operator %q", text)
+			return nil, fmt.Errorf("unknown operator %q", text)
 		}
 	}
 	return &stringLexer{tokens}, nil
@@ -131,16 +142,16 @@ func (l *stringLexer) nextToken() (token, error) {
 	return t, nil
 }
 
-// runeBuffer is a buffer of runes.
-type runeBuffer struct {
+// rstack is a stack of runes.
+type rstack struct {
 	b []rune
 }
 
-func (b *runeBuffer) add(r rune) {
+func (b *rstack) push(r rune) {
 	b.b = append(b.b, r)
 }
 
-func (b *runeBuffer) getAndReset() string {
+func (b *rstack) pop() string {
 	text := string(b.b)
 	b.b = nil
 	return text

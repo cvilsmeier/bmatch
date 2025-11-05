@@ -9,17 +9,16 @@ that supports grouping and boolean expressions:
 
     /DEBUG/ OR ( /TRACE/ AND NOT /TRACE.*sql/ )
 
-The expression syntax is:
+The expression syntax is (whitespace ignored for simplicity):
 
-    <expr>        ::=  <literal> | <group> | <boolExpr>
-    <group>       ::=  "(" <expr> ")"
-    <boolExpr>    ::=  <notExpr> | <andExpr> | <orExpr>
-    <notExpr>     ::=  "NOT" <expr>
-    <andExpr>     ::=  <expr> "AND" <expr>
-    <orExpr>      ::=  <expr> "OR" expr
-    <literal>     ::=  "/" <regex> "/"                      ; ASCII 0x2F slash character
-    <regex>       ::=  ? any valid golang regex ?           ; https://pkg.go.dev/regexp/syntax
-    <space>       ::=  " "                                  ; ASCII 0x20 space character
+    <expr>     ::=  <literal> | <operator>
+    <operator> ::=  <group> | <not> | <and> | <or>
+    <group>    ::=  "(" <expr> ")"
+    <not>      ::=  "NOT" <expr>
+    <and>      ::=  <expr> "AND" <expr>
+    <or>       ::=  <expr> "OR" expr
+    <literal>  ::=  "/" <regex> "/"
+    <regex>    ::=  ? any valid golang regex ?
 
 The operator precedence is the same as in C (the programming language):
 

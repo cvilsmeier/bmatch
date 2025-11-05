@@ -11,14 +11,15 @@ that supports grouping and boolean expressions:
 
 The expression syntax is:
 
-    expr        := literal | groupExpr | boolExpr
-    groupExpr   := "(" expr ")"
-    boolExpr    := not | and | or
-    notExpr     := "NOT" expr
-    andExpr     := expr "AND" expr
-    orExpr      := expr "OR" expr
-    literal     := "/" regex "/"
-    regex       := ? a valid golang regex ?
+    <expr>        ::=  <literal> | <group> | <boolExpr>
+    <group>       ::=  "(" <expr> ")"
+    <boolExpr>    ::=  <notExpr> | <andExpr> | <orExpr>
+    <notExpr>     ::=  "NOT" <expr>
+    <andExpr>     ::=  <expr> "AND" <expr>
+    <orExpr>      ::=  <expr> "OR" expr
+    <literal>     ::=  "/" <regex> "/"                      ; ASCII 0x2F slash character
+    <regex>       ::=  ? any valid golang regex ?           ; https://pkg.go.dev/regexp/syntax
+    <space>       ::=  " "                                  ; ASCII 0x20 space character
 
 The operator precedence is the same as in C (the programming language):
 
@@ -30,7 +31,9 @@ The operator precedence is the same as in C (the programming language):
 
 ## Usage
 
-    $ go get github.com/cvilsmeier/bmatch
+~~~
+go get github.com/cvilsmeier/bmatch
+~~~
 
 
 ```go
@@ -46,7 +49,7 @@ func main() {
 ## Install bmatch command line tool
 
 ~~~
-$ go install github.com/cvilsmeier/bmatch/cmd/bmatch@latest
+go install github.com/cvilsmeier/bmatch/cmd/bmatch@latest
 ~~~
 
 ~~~

@@ -16,13 +16,16 @@ func TestStringLexer(t *testing.T) {
 		{"empty_1", "", "EOF"},
 		{"empty_2", "          ", "EOF"},
 		// parentheses
-		{"paren_1", "(", "(,EOF"},
-		{"paren_2", " ( ", "(,EOF"},
-		{"paren_3", ")", "),EOF"},
-		{"paren_4", "()", "(,),EOF"},
-		{"paren_5", "(())", "(,(,),),EOF"},
-		{"paren_6", "(()())", "(,(,),(,),),EOF"},
-		{"paren_7", " (   ()()  )  ", "(,(,),(,),),EOF"},
+		{"paren_01", "(", "(,EOF"},
+		{"paren_02", " ( ", "(,EOF"},
+		{"paren_03", ")", "),EOF"},
+		{"paren_04", "()", "(,),EOF"},
+		{"paren_05", "( )", "(,),EOF"},
+		{"paren_06", "(())", "(,(,),),EOF"},
+		{"paren_07", "( ( ) )", "(,(,),),EOF"},
+		{"paren_08", "(()())", "(,(,),(,),),EOF"},
+		{"paren_09", "( ( ) ( ) )", "(,(,),(,),),EOF"},
+		{"paren_10", " (   ()()  )  ", "(,(,),(,),),EOF"},
 		// literals
 		{"lit_01", "//", "//,EOF"},
 		{"lit_02", "////", "//,//,EOF"},
@@ -63,7 +66,6 @@ func TestStringLexer(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			is := assert(t)
-
 			lex, err := newStringLexer(tt.input)
 			want := strings.TrimSpace(tt.want)
 			var have string

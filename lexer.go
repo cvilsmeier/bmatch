@@ -63,6 +63,7 @@ func newStringLexer(input string) (*stringLexer, error) {
 	var inOperator bool
 	for _, r := range input {
 		if inLiteral {
+			// TODO allow escaped "/" characters in literal
 			if r == '/' {
 				inLiteral = false
 				text := rbuf.getAndReset()
@@ -73,8 +74,7 @@ func newStringLexer(input string) (*stringLexer, error) {
 			continue // with next rune
 		}
 		if inOperator {
-			switch r {
-			case ' ', '(', ')', '/':
+			if r == ' ' || r == '(' || r == ')' || r == '/' {
 				inOperator = false
 				text := rbuf.getAndReset()
 				switch text {

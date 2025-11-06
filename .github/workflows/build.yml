@@ -19,6 +19,7 @@ jobs:
       - name: Go ${{matrix.go-version}}
         uses: actions/setup-go@v4
         with:
+          cache: false
           go-version: ${{matrix.go-version}}
       
       - name: Go version

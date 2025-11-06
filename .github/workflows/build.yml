@@ -14,10 +14,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Go ${{matrix.go-version}}
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v6
         with:
           cache: false
           go-version: ${{matrix.go-version}}

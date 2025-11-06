@@ -4,6 +4,7 @@ package bmatch
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/cvilsmeier/bmatch/internal"
 )
@@ -53,7 +54,9 @@ func compileNode(expr string) (internal.Node, error) {
 func explainNode(level int, node internal.Node) string {
 	var str string
 	switch node.Typ {
-	case internal.LiteralNode:
+	case internal.StringNode:
+		str = "'" + node.Text + "'"
+	case internal.RegexNode:
 		str = "/" + node.Text + "/"
 	case internal.NotNode:
 		str = "NOT"
@@ -92,7 +95,9 @@ func buildMatcher(level int, node internal.Node) (Matcher, error) {
 		submatchers = append(submatchers, submatcher)
 	}
 	switch node.Typ {
-	case internal.LiteralNode:
+	case internal.StringNode:
+		return &stringMatcher{node.Text}, nil
+	case internal.RegexNode:
 		rex, err := regexp.Compile(node.Text)
 		if err != nil {
 			return nil, err
@@ -109,7 +114,16 @@ func buildMatcher(level int, node internal.Node) (Matcher, error) {
 	}
 }
 
-// A regexMatcher matches if its Regexp matches.
+// A stringMatcher matches if the input contains a given string.
+type stringMatcher struct {
+	str string
+}
+
+func (m *stringMatcher) Match(str string) bool {
+	return strings.Contains(str, m.str)
+}
+
+// A regexMatcher matches if the input matches a given regular expression.
 type regexMatcher struct {
 	rex *regexp.Regexp
 }

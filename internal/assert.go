@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -32,9 +33,24 @@ func (a *Asserter) False(c bool) {
 	}
 }
 
+func (a *Asserter) NoErr(err error) {
+	a.t.Helper()
+	if err != nil {
+		a.t.Fatalf("\nwant no error\nhave %s", err)
+	}
+}
+
 func (a *Asserter) Eq(want, have any) {
 	a.t.Helper()
 	if want != have {
 		a.t.Fatalf("\nwant %#v\nhave %#v", want, have)
+	}
+}
+
+func (a *Asserter) Eqf(want, have any, format string, args ...any) {
+	a.t.Helper()
+	if want != have {
+		msg := fmt.Sprintf(format, args...)
+		a.t.Fatalf("\n%s\nwant %#v\nhave %#v", msg, want, have)
 	}
 }

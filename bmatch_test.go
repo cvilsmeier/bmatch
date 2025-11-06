@@ -1,12 +1,235 @@
 package bmatch
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/cvilsmeier/bmatch/internal"
 )
+
+func TestBmatch(t *testing.T) {
+	type input struct {
+		text   string
+		result bool
+	}
+	type testcase struct {
+		name      string
+		expr      string
+		planOrErr string
+		inputs    []input
+	}
+	for _, tt := range []testcase{
+		{
+			"emptyString",
+			"",
+			"''",
+			[]input{
+				{"", true},
+				{"a", true},
+				{"foobar", true},
+				{"    foobar  ", true},
+			},
+		},
+		{
+			"emptyRegex",
+			"//",
+			"//",
+			[]input{
+				{"", true},
+				{"a", true},
+				{"foobar", true},
+				{"    foobar  ", true},
+			},
+		},
+		{
+			"simpleString",
+			"foo",
+			"'foo'",
+			[]input{
+				{"", false},
+				{"foo bar", true},
+				{"foo", true},
+				{"/foo", true},
+				{"foo/", true},
+				{"    foo  ", true},
+				{"foo foo", true},
+				{"foofoo", true},
+				{"fo", false},
+			},
+		},
+		{
+			"simpleRegex",
+			"/fo*bar/",
+			"/fo*bar/",
+			[]input{
+				{"", false},
+				{"bar", false},
+				{"fbar", true},
+				{"fobar", true},
+				{"foobar", true},
+				{"fooobar", true},
+				{"fooolbar", false},
+				{"    foobar  ", true},
+			},
+		},
+		{
+			"notString",
+			"NOT foo",
+			"NOT['foo']",
+			[]input{
+				{"", true},
+				{"a", true},
+				{"foobar", false},
+				{"    foobar  ", false},
+				{"    fobar  ", true},
+			},
+		},
+		{
+			"notRegex",
+			"NOT /foo$/",
+			"NOT[/foo$/]",
+			[]input{
+				{"foo", false},
+				{" foo", false},
+				{"foo ", true},
+				{"foobar", true},
+				{"barfoo", false},
+			},
+		},
+		{
+			"andExpr",
+			"/aa*/ AND bb",
+			"AND[/aa*/,'bb']",
+			[]input{
+				{"", false},
+				{"bb", false},
+				{"ab", false},
+				{"a bb", true},
+				{"aa bb", true},
+				{"aaa bb", true},
+				{"aaabb", true},
+				{"aaabab", false},
+			},
+		},
+		{
+			"andExprOrExpr",
+			"/foo/ AND /bar/ OR /baz/",
+			"OR[AND[/foo/,/bar/],/baz/]",
+			[]input{
+				{"", false},
+				{"foo", false},
+				{"bar", false},
+				{"baz", true},
+				{"foobar", true},
+				{"foobaz", true},
+				{"barbaz", true},
+				{"foobarbaz", true},
+				{"barfoobaz", true},
+				{"bazbarfoo", true},
+			},
+		},
+		{
+			"andExprOrExprWithParens",
+			"/foo/ AND (/bar/ OR /baz/)",
+			"AND[/foo/,OR[/bar/,/baz/]]",
+			[]input{
+				{"", false},
+				{"foo", false},
+				{"bar", false},
+				{"baz", false},
+				{"foobar", true},
+				{"foobaz", true},
+				{"barbaz", false},
+				{"foobarbaz", true},
+				{"barfoobaz", true},
+				{"bazbarfoo", true},
+			},
+		},
+		{
+			"escapingRegex",
+			"/^\\/home/ AND NOT /^\\/home\\/tmp/",
+			"AND[/^/home/,NOT[/^/home/tmp/]]",
+			[]input{
+				{"", false},
+				{"/home/joe/bin", true},
+				{"/home/tmp/bin", false},
+				{"/home/joe/tmp", true},
+				{"/opt/home/joe/tmp", false},
+			},
+		},
+		{
+			"logfileExampleWithoutRegex",
+			"DEBUG OR (TRACE AND NOT (TRACE AND SQL))",
+			"OR['DEBUG',AND['TRACE',NOT[AND['TRACE','SQL']]]]",
+			[]input{
+				{"", false},
+				{"10:00 DEBUG will poll now", true},
+				{"10:01 DEBUG polling error: no route to host", true},
+				{"10:02 TRACE(poll) connecting 10.0.0.21", true},
+				{"10:03 TRACE(SQL) UPDATE sessions SET lastAccess=? WHERE id=?", false},
+				{"10:04 TRACE(SQL) UPDATE sessions SET lastAccess=? WHERE id=?", false},
+				{"10:05 TRACE(http) POST /contactForm from 174.161.32.109", true},
+				{"10:06 TRACE(SQL) UPDATE sessions SET lastAccess=? WHERE id=?", false},
+				{"11:00 DEBUG will poll now", true},
+			},
+		},
+		{
+			"logfileExampleWithRegex",
+			"/DEBUG/ OR ( /TRACE/ AND NOT /(?i)TRACE.*sql/ )",
+			"OR[/DEBUG/,AND[/TRACE/,NOT[/(?i)TRACE.*sql/]]]",
+			[]input{
+				{"", false},
+				{"10:00 DEBUG will poll now", true},
+				{"10:01 DEBUG polling error: no route to host", true},
+				{"10:02 TRACE(poll) connecting 10.0.0.21", true},
+				{"10:03 TRACE(SQL) UPDATE sessions SET lastAccess=? WHERE id=?", false},
+				{"10:04 TRACE(SQL) UPDATE sessions SET lastAccess=? WHERE id=?", false},
+				{"10:05 TRACE(http) POST /contactForm from 174.161.32.109", true},
+				{"10:06 TRACE(SQL) UPDATE sessions SET lastAccess=? WHERE id=?", false},
+				{"11:00 DEBUG will poll now", true},
+			},
+		},
+		{
+			"errUnclosedGroup",
+			"DEBUG OR (TRACE AND NOT SQL",
+			"err: syntax error",
+			[]input{},
+		},
+		{
+			"errUnclosedRegex",
+			"DEBUG OR /aa",
+			"err: unclosed regex in \"aa\"",
+			[]input{},
+		},
+		{
+			"errUnbalancedAnd",
+			"DEBUG AND",
+			"err: syntax error",
+			[]input{},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			is := internal.Assert(t)
+			if strings.HasPrefix(tt.planOrErr, "err: ") {
+				_, err := Explain(tt.expr)
+				is.Eq(tt.planOrErr, fmt.Sprintf("err: %s", err))
+				_, err = Compile(tt.expr)
+				is.Eq(tt.planOrErr, fmt.Sprintf("err: %s", err))
+			} else {
+				plan, err := Explain(tt.expr)
+				is.NoErr(err)
+				is.Eq(tt.planOrErr, plan)
+				matcher, err := Compile(tt.expr)
+				is.NoErr(err)
+				for _, input := range tt.inputs {
+					is.Eqf(input.result, matcher.Match(input.text), "for input text %q", input.text)
+				}
+			}
+		})
+	}
+}
 
 func TestMatcher(t *testing.T) {
 	explain := func(expr string) string {
@@ -16,10 +239,11 @@ func TestMatcher(t *testing.T) {
 		}
 		return plan
 	}
-	t.Run("matchEverything", func(t *testing.T) {
-		is := internal.Assert(t)
+	is := internal.Assert(t)
+	{
+		is.Eq("''", explain(""))
+		is.Eq("//", explain("//"))
 		for _, expr := range []string{"", "//"} {
-			is.Eq("//", explain(expr))
 			m := MustCompile(expr)
 			is.True(m.Match(""))
 			is.True(m.Match("a"))
@@ -30,33 +254,29 @@ func TestMatcher(t *testing.T) {
 			is.True(m.Match("bb  aa"))
 			is.True(m.Match("bb  aabb  aa"))
 		}
-	})
-	t.Run("matchNothing", func(t *testing.T) {
-		is := internal.Assert(t)
+	}
+	{
 		expr := "NOT //"
 		is.Eq("NOT[//]", explain(expr))
 		m := MustCompile(expr)
 		is.False(m.Match(""))
 		is.False(m.Match("a"))
-	})
-	t.Run("matchOnlyEmptyString", func(t *testing.T) {
-		is := internal.Assert(t)
+	}
+	{
 		expr := "/^$/"
 		is.Eq("/^$/", explain(expr))
 		m := MustCompile(expr)
 		is.True(m.Match(""))
 		is.False(m.Match("a"))
-	})
-	t.Run("matchOnlyNonEmptyString", func(t *testing.T) {
-		is := internal.Assert(t)
+	}
+	{
 		expr := "NOT /^$/"
 		is.Eq("NOT[/^$/]", explain(expr))
 		m := MustCompile(expr)
 		is.False(m.Match(""))
 		is.True(m.Match("a"))
-	})
-	t.Run("andOperator", func(t *testing.T) {
-		is := internal.Assert(t)
+	}
+	{
 		expr := "/aa/ AND /bb/"
 		is.Eq("AND[/aa/,/bb/]", explain(expr))
 		m := MustCompile(expr)
@@ -68,9 +288,8 @@ func TestMatcher(t *testing.T) {
 		is.True(m.Match("aabb"))
 		is.True(m.Match("bb  aa"))
 		is.True(m.Match("bb  aabb  aa"))
-	})
-	t.Run("andOr", func(t *testing.T) {
-		is := internal.Assert(t)
+	}
+	{
 		expr := "/foo/ AND /bar/ OR /baz/"
 		is.Eq("OR[AND[/foo/,/bar/],/baz/]", explain(expr))
 		m := MustCompile(expr)
@@ -84,9 +303,8 @@ func TestMatcher(t *testing.T) {
 		is.True(m.Match("foobarbaz"))
 		is.True(m.Match("barfoobaz"))
 		is.True(m.Match("bazbarfoo"))
-	})
-	t.Run("andOrGroup", func(t *testing.T) {
-		is := internal.Assert(t)
+	}
+	{
 		expr := "/foo/ AND (/bar/ OR /baz/)"
 		is.Eq("AND[/foo/,OR[/bar/,/baz/]]", explain(expr))
 		m := MustCompile(expr)
@@ -100,9 +318,8 @@ func TestMatcher(t *testing.T) {
 		is.True(m.Match("foobarbaz"))
 		is.True(m.Match("barfoobaz"))
 		is.True(m.Match("bazbarfoo"))
-	})
-	t.Run("withEscaping", func(t *testing.T) {
-		is := internal.Assert(t)
+	}
+	{
 		expr := "/^\\/home/ AND NOT /^\\/home\\/tmp/"
 		is.Eq("AND[/^/home/,NOT[/^/home/tmp/]]", explain(expr))
 		m := MustCompile(expr)
@@ -110,9 +327,8 @@ func TestMatcher(t *testing.T) {
 		is.False(m.Match("/home/tmp/bin"))
 		is.True(m.Match("/home/joe/tmp"))
 		is.False(m.Match("/opt/home/joe/tmp"))
-	})
-	t.Run("readme", func(t *testing.T) {
-		is := internal.Assert(t)
+	}
+	{
 		expr := "/DEBUG/ OR ( /TRACE/ AND NOT /(?i)TRACE.*sql/ )"
 		is.Eq("OR[/DEBUG/,AND[/TRACE/,NOT[/(?i)TRACE.*sql/]]]", explain(expr))
 		m := MustCompile(expr)
@@ -124,7 +340,7 @@ func TestMatcher(t *testing.T) {
 		is.True(m.Match("10:05 TRACE(http) POST /contactForm from 174.161.32.109"))
 		is.False(m.Match("10:06 TRACE(SQL) UPDATE sessions SET lastAccess=? WHERE id=?"))
 		is.True(m.Match("11:00 DEBUG will poll now"))
-	})
+	}
 }
 
 const randomText = "Cause dried no solid no an small so still widen. Ten weather evident smiling bed against she examine its. Rendered far opinions two yet moderate sex striking. Sufficient motionless compliment by stimulated assistance at. Convinced resolving extensive agreeable in it on as remainder. Cordially say affection met who propriety him. Are man she towards private weather pleased. In more part he lose need so want rank no. At bringing or he sensible pleasure. Prevent he parlors do waiting be females an message society."

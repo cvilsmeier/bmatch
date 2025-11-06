@@ -160,8 +160,15 @@ func (l *fakeLexer) NextToken() (Token, error) {
 	case "OR":
 		return Token{OrToken, "OR"}, nil
 	}
-	if len(tok) == 0 {
-		panic("cannot have empty literal token")
+	if strings.HasPrefix(tok, "/") && strings.HasSuffix(tok, "/") {
+		tok = tok[1 : len(tok)-1]
+		if len(tok) == 0 {
+			panic("cannot have empty regex token")
+		}
+		return Token{RegexToken, tok}, nil
 	}
-	return Token{LiteralToken, tok}, nil
+	if len(tok) == 0 {
+		panic("cannot have empty string token")
+	}
+	return Token{StringToken, tok}, nil
 }

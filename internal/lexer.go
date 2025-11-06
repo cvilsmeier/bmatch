@@ -27,7 +27,8 @@ const (
 	NotToken
 	AndToken
 	OrToken
-	LiteralToken
+	StringToken
+	RegexToken
 	EOFToken
 )
 
@@ -37,69 +38,13 @@ type StringLexer struct {
 }
 
 func NewStringLexer(input string) (*StringLexer, error) {
+	var stack rstack
 	var tokens []Token
-	var rbuf rstack
-	var inEscape bool
-	var inLiteral bool
-	var inOperator bool
-	for _, r := range input {
-		if inEscape {
-			rbuf.push(r)
-			switch r {
-			case '/':
-				inEscape = false
-			default:
-				return nil, fmt.Errorf("invalid escape sequence in %q", rbuf.pop())
-			}
-		} else if inLiteral {
-			switch r {
-			case '/':
-				inLiteral = false
-				tokens = append(tokens, Token{LiteralToken, rbuf.pop()})
-			case '\\':
-				inEscape = true
-			default:
-				rbuf.push(r)
-			}
-		} else {
-			if inOperator {
-				switch r {
-				case ' ', '(', ')', '/':
-					inOperator = false
-					text := rbuf.pop()
-					switch text {
-					case "NOT":
-						tokens = append(tokens, Token{NotToken, ""})
-					case "AND":
-						tokens = append(tokens, Token{AndToken, ""})
-					case "OR":
-						tokens = append(tokens, Token{OrToken, ""})
-					default:
-						return nil, fmt.Errorf("unknown operator %q", text)
-					}
-				}
-			}
-			switch r {
-			case ' ':
-				// space character are separators but carry no meaning
-			case '(':
-				tokens = append(tokens, Token{OpenToken, ""})
-			case ')':
-				tokens = append(tokens, Token{CloseToken, ""})
-			case '/':
-				inLiteral = true
-			default:
-				rbuf.push(r)
-				inOperator = true
-			}
-		}
-	}
-	if inLiteral {
-		return nil, fmt.Errorf("unclosed literal")
-	}
-	if inOperator {
-		text := rbuf.pop()
+	consumeStack := func() {
+		text := stack.pop()
 		switch text {
+		case "":
+			// ignore
 		case "NOT":
 			tokens = append(tokens, Token{NotToken, ""})
 		case "AND":
@@ -107,8 +52,79 @@ func NewStringLexer(input string) (*StringLexer, error) {
 		case "OR":
 			tokens = append(tokens, Token{OrToken, ""})
 		default:
-			return nil, fmt.Errorf("unknown operator %q", text)
+			tokens = append(tokens, Token{StringToken, text})
 		}
+	}
+	var inEscape bool
+	var inRegex bool
+	var inString bool
+	for _, r := range input {
+		if inEscape {
+			switch r {
+			case ' ', '(', ')', '/', '\\':
+				stack.push(r)
+				inEscape = false
+			default:
+				return nil, fmt.Errorf("invalid escape sequence in %q", stack.pop())
+			}
+		} else if inRegex {
+			switch r {
+			case '/':
+				inRegex = false
+				tokens = append(tokens, Token{RegexToken, stack.pop()})
+			case '\\':
+				inEscape = true
+			default:
+				stack.push(r)
+			}
+		} else if inString {
+			switch r {
+			case ' ':
+				inString = false
+				consumeStack()
+			case '(':
+				inString = false
+				consumeStack()
+				tokens = append(tokens, Token{OpenToken, ""})
+			case ')':
+				inString = false
+				consumeStack()
+				tokens = append(tokens, Token{CloseToken, ""})
+			case '/':
+				inString = false
+				consumeStack()
+				inRegex = true
+			case '\\':
+				inEscape = true
+			default:
+				stack.push(r)
+			}
+		} else {
+			switch r {
+			case ' ':
+				// separator
+			case '(':
+				tokens = append(tokens, Token{OpenToken, ""})
+			case ')':
+				tokens = append(tokens, Token{CloseToken, ""})
+			case '/':
+				inRegex = true
+			case '\\':
+				inEscape = true
+			default:
+				stack.push(r)
+				inString = true
+			}
+		}
+	}
+	if inEscape {
+		return nil, fmt.Errorf("unclosed escape sequence in %q", stack.pop())
+	}
+	if inRegex {
+		return nil, fmt.Errorf("unclosed regex in %q", stack.pop())
+	}
+	if inString {
+		consumeStack()
 	}
 	return &StringLexer{tokens}, nil
 }

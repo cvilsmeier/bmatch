@@ -14,8 +14,8 @@ func Parse(lex Lexer) (Node, error) {
 		return Node{}, err
 	}
 	if lookahead.IsEOF() {
-		// fast path for empty input: match empty regex (in other words: match exerything)
-		return Node{LiteralNode, "", nil}, nil
+		// fast path for empty input: match everything
+		return Node{StringNode, "", nil}, nil
 	}
 	const maxTokens = 1000 // prevent endless loop
 	for range maxTokens {
@@ -56,7 +56,8 @@ type NodeTyp int
 
 const (
 	_ NodeTyp = iota
-	LiteralNode
+	StringNode
+	RegexNode
 	NotNode
 	AndNode
 	OrNode
@@ -82,7 +83,7 @@ func (s *stack) push(token Token) {
 // reduce reduces the stack by creating nodes according to the
 // following reduction rules:
 //
-//	literal          --> node
+//	literal          --> node  // string or regex
 //	"(" node ")"     --> node
 //	"NOT" node       --> node
 //	node "AND" node  --> node
@@ -114,8 +115,12 @@ func (s *stack) reduceLiteralToken() bool {
 	nitems := len(s.items)
 	if nitems >= 1 {
 		item := s.items[nitems-1]
-		if item.isTokenOf(LiteralToken) {
-			newNode := Node{Typ: LiteralNode, Text: item.token.Text}
+		if item.isTokenOf(StringToken) {
+			newNode := Node{Typ: StringNode, Text: item.token.Text}
+			s.replaceItems(nitems-1, nitems-1, newNode)
+			return true
+		} else if item.isTokenOf(RegexToken) {
+			newNode := Node{Typ: RegexNode, Text: item.token.Text}
 			s.replaceItems(nitems-1, nitems-1, newNode)
 			return true
 		}

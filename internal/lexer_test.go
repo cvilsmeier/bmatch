@@ -92,19 +92,19 @@ func collectAndDumpForTest(lex Lexer) string {
 			panic("unexpected err in nextToken()")
 		}
 		switch t.Typ {
-		case TOpen:
+		case OpenToken:
 			toks = append(toks, "(")
-		case TClose:
+		case CloseToken:
 			toks = append(toks, ")")
-		case TNot:
+		case NotToken:
 			toks = append(toks, "NOT")
-		case TAnd:
+		case AndToken:
 			toks = append(toks, "AND")
-		case TOr:
+		case OrToken:
 			toks = append(toks, "OR")
-		case TLiteral:
+		case LiteralToken:
 			toks = append(toks, "'"+t.Text+"'")
-		case TEOF:
+		case EOFToken:
 			toks = append(toks, "EOF")
 			return strings.Join(toks, ", ")
 		default:

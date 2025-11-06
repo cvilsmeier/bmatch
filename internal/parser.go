@@ -30,7 +30,7 @@ func Parse(lex Lexer) (Node, error) {
 		// reduce (build nodes from stack)
 		stack.reduce(lookahead)
 		// did it terminate?
-		if lookahead.Typ == TEOF {
+		if lookahead.Typ == EOFToken {
 			if stack.len() == 1 {
 				item := stack.first()
 				if item.isNode() {
@@ -114,7 +114,7 @@ func (s *stack) reduceLiteralToken() bool {
 	nitems := len(s.items)
 	if nitems >= 1 {
 		item := s.items[nitems-1]
-		if item.isTokenOf(TLiteral) {
+		if item.isTokenOf(LiteralToken) {
 			newNode := Node{Typ: LiteralNode, Text: item.token.Text}
 			s.replaceItems(nitems-1, nitems-1, newNode)
 			return true
@@ -128,7 +128,7 @@ func (s *stack) reduceNotToken() bool {
 	if nitems >= 2 {
 		i1 := s.items[nitems-2] // NOT
 		i2 := s.items[nitems-1] // node
-		if i1.isTokenOf(TNot) && i2.isNode() {
+		if i1.isTokenOf(NotToken) && i2.isNode() {
 			newNode := Node{Typ: NotNode, Text: i1.token.Text, Subnodes: []Node{i2.node}}
 			s.replaceItems(nitems-2, nitems, newNode)
 			return true
@@ -143,7 +143,7 @@ func (s *stack) reduceAndToken() bool {
 		i1 := s.items[nitems-3] // node
 		i2 := s.items[nitems-2] // AND
 		i3 := s.items[nitems-1] // node
-		if i1.isNode() && i2.isTokenOf(TAnd) && i3.isNode() {
+		if i1.isNode() && i2.isTokenOf(AndToken) && i3.isNode() {
 			newNode := Node{Typ: AndNode, Text: i2.token.Text, Subnodes: []Node{i1.node, i3.node}}
 			s.replaceItems(nitems-3, nitems, newNode)
 			return true
@@ -154,13 +154,13 @@ func (s *stack) reduceAndToken() bool {
 
 func (s *stack) reduceOrToken(lookahead Token) bool {
 	switch lookahead.Typ {
-	case TClose, TOr, TEOF:
+	case CloseToken, OrToken, EOFToken:
 		nitems := len(s.items)
 		if nitems >= 3 {
 			i1 := s.items[nitems-3] // node
 			i2 := s.items[nitems-2] // OR
 			i3 := s.items[nitems-1] // node
-			if i1.isNode() && i2.isTokenOf(TOr) && i3.isNode() {
+			if i1.isNode() && i2.isTokenOf(OrToken) && i3.isNode() {
 				newNode := Node{Typ: OrNode, Text: i2.token.Text, Subnodes: []Node{i1.node, i3.node}}
 				s.replaceItems(nitems-3, nitems, newNode)
 				return true
@@ -176,7 +176,7 @@ func (s *stack) reduceOpenCloseToken() bool {
 		i1 := s.items[nitems-3] // (
 		i2 := s.items[nitems-2] // node
 		i3 := s.items[nitems-1] // )
-		if i1.isTokenOf(TOpen) && i2.isNode() && i3.isTokenOf(TClose) {
+		if i1.isTokenOf(OpenToken) && i2.isNode() && i3.isTokenOf(CloseToken) {
 			s.replaceItems(nitems-3, nitems, i2.node)
 			return true
 		}

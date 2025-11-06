@@ -144,24 +144,24 @@ func newFakeLexer(input string) *fakeLexer {
 
 func (l *fakeLexer) NextToken() (Token, error) {
 	if len(l.toks) == 0 {
-		return Token{TEOF, "EOF"}, nil
+		return Token{EOFToken, "EOF"}, nil
 	}
 	tok := l.toks[0]
 	l.toks = l.toks[1:]
 	switch tok {
 	case "(":
-		return Token{TOpen, "("}, nil
+		return Token{OpenToken, "("}, nil
 	case ")":
-		return Token{TClose, ")"}, nil
+		return Token{CloseToken, ")"}, nil
 	case "NOT":
-		return Token{TNot, "NOT"}, nil
+		return Token{NotToken, "NOT"}, nil
 	case "AND":
-		return Token{TAnd, "AND"}, nil
+		return Token{AndToken, "AND"}, nil
 	case "OR":
-		return Token{TOr, "OR"}, nil
+		return Token{OrToken, "OR"}, nil
 	}
 	if len(tok) == 0 {
 		panic("cannot have empty literal token")
 	}
-	return Token{TLiteral, tok}, nil
+	return Token{LiteralToken, tok}, nil
 }

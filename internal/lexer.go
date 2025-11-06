@@ -16,19 +16,19 @@ type Token struct {
 }
 
 func (t Token) IsZero() bool { return int(t.Typ) == 0 }
-func (t Token) IsEOF() bool  { return t.Typ == TEOF }
+func (t Token) IsEOF() bool  { return t.Typ == EOFToken }
 
 type TokenTyp int
 
 const (
 	_ TokenTyp = iota
-	TOpen
-	TClose
-	TNot
-	TAnd
-	TOr
-	TLiteral
-	TEOF
+	OpenToken
+	CloseToken
+	NotToken
+	AndToken
+	OrToken
+	LiteralToken
+	EOFToken
 )
 
 // A StringLexer tokenizes an input string.
@@ -55,7 +55,7 @@ func NewStringLexer(input string) (*StringLexer, error) {
 			switch r {
 			case '/':
 				inLiteral = false
-				tokens = append(tokens, Token{TLiteral, rbuf.pop()})
+				tokens = append(tokens, Token{LiteralToken, rbuf.pop()})
 			case '\\':
 				inEscape = true
 			default:
@@ -69,11 +69,11 @@ func NewStringLexer(input string) (*StringLexer, error) {
 					text := rbuf.pop()
 					switch text {
 					case "NOT":
-						tokens = append(tokens, Token{TNot, ""})
+						tokens = append(tokens, Token{NotToken, ""})
 					case "AND":
-						tokens = append(tokens, Token{TAnd, ""})
+						tokens = append(tokens, Token{AndToken, ""})
 					case "OR":
-						tokens = append(tokens, Token{TOr, ""})
+						tokens = append(tokens, Token{OrToken, ""})
 					default:
 						return nil, fmt.Errorf("unknown operator %q", text)
 					}
@@ -83,9 +83,9 @@ func NewStringLexer(input string) (*StringLexer, error) {
 			case ' ':
 				// space character are separators but carry no meaning
 			case '(':
-				tokens = append(tokens, Token{TOpen, ""})
+				tokens = append(tokens, Token{OpenToken, ""})
 			case ')':
-				tokens = append(tokens, Token{TClose, ""})
+				tokens = append(tokens, Token{CloseToken, ""})
 			case '/':
 				inLiteral = true
 			default:
@@ -101,11 +101,11 @@ func NewStringLexer(input string) (*StringLexer, error) {
 		text := rbuf.pop()
 		switch text {
 		case "NOT":
-			tokens = append(tokens, Token{TNot, ""})
+			tokens = append(tokens, Token{NotToken, ""})
 		case "AND":
-			tokens = append(tokens, Token{TAnd, ""})
+			tokens = append(tokens, Token{AndToken, ""})
 		case "OR":
-			tokens = append(tokens, Token{TOr, ""})
+			tokens = append(tokens, Token{OrToken, ""})
 		default:
 			return nil, fmt.Errorf("unknown operator %q", text)
 		}
@@ -115,7 +115,7 @@ func NewStringLexer(input string) (*StringLexer, error) {
 
 func (l *StringLexer) NextToken() (Token, error) {
 	if len(l.tokens) == 0 {
-		return Token{TEOF, ""}, nil
+		return Token{EOFToken, ""}, nil
 	}
 	t := l.tokens[0]
 	l.tokens = l.tokens[1:]

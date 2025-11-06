@@ -4,6 +4,8 @@ package bmatch
 import (
 	"fmt"
 	"regexp"
+
+	"github.com/cvilsmeier/bmatch/internal"
 )
 
 // A Matcher matches strings.
@@ -40,31 +42,31 @@ func Explain(expr string) (string, error) {
 	return explainNode(0, node), nil
 }
 
-func compileNode(expr string) (node, error) {
-	lex, err := newStringLexer(expr)
+func compileNode(expr string) (internal.Node, error) {
+	lex, err := internal.NewStringLexer(expr)
 	if err != nil {
-		return node{}, err
+		return internal.Node{}, err
 	}
-	return parse(lex)
+	return internal.Parse(lex)
 }
 
-func explainNode(level int, node node) string {
+func explainNode(level int, node internal.Node) string {
 	var str string
-	switch node.typ {
-	case ntLiteral:
-		str = "/" + node.text + "/"
-	case ntNot:
+	switch node.Typ {
+	case internal.LiteralNode:
+		str = "/" + node.Text + "/"
+	case internal.NotNode:
 		str = "NOT"
-	case ntAnd:
+	case internal.AndNode:
 		str = "AND"
-	case ntOr:
+	case internal.OrNode:
 		str = "OR"
 	default:
 		panic("bad node typ")
 	}
-	if len(node.subnodes) > 0 {
+	if len(node.Subnodes) > 0 {
 		str += "["
-		for i, child := range node.subnodes {
+		for i, child := range node.Subnodes {
 			if i > 0 {
 				str += ","
 			}
@@ -77,30 +79,30 @@ func explainNode(level int, node node) string {
 
 const maxLevels = 20
 
-func buildMatcher(level int, node node) (Matcher, error) {
+func buildMatcher(level int, node internal.Node) (Matcher, error) {
 	if level > maxLevels {
 		return nil, fmt.Errorf("too deep nesting level %d", level)
 	}
 	var submatchers []Matcher
-	for _, subnode := range node.subnodes {
+	for _, subnode := range node.Subnodes {
 		submatcher, err := buildMatcher(level+1, subnode)
 		if err != nil {
 			return nil, err
 		}
 		submatchers = append(submatchers, submatcher)
 	}
-	switch node.typ {
-	case ntLiteral:
-		rex, err := regexp.Compile(node.text)
+	switch node.Typ {
+	case internal.LiteralNode:
+		rex, err := regexp.Compile(node.Text)
 		if err != nil {
 			return nil, err
 		}
 		return &regexMatcher{rex}, nil
-	case ntNot:
+	case internal.NotNode:
 		return &notMatcher{submatchers}, nil
-	case ntAnd:
+	case internal.AndNode:
 		return &andMatcher{submatchers}, nil
-	case ntOr:
+	case internal.OrNode:
 		return &orMatcher{submatchers}, nil
 	default:
 		panic("bad node type")

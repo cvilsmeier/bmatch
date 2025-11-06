@@ -1,63 +1,43 @@
-package bmatch
+package internal
 
 import (
 	"fmt"
 )
 
-// A lexer yields tokens, one after another.
+// A Lexer yields tokens, one after another.
 // The last token is an EOF token.
-type lexer interface {
-	nextToken() (token, error)
+type Lexer interface {
+	NextToken() (Token, error)
 }
 
-type token struct {
-	typ  tokenTyp
-	text string
+type Token struct {
+	Typ  TokenTyp
+	Text string
 }
 
-func (t token) isZero() bool { return int(t.typ) == 0 }
-func (t token) isEOF() bool  { return t.typ == ttEOF }
+func (t Token) IsZero() bool { return int(t.Typ) == 0 }
+func (t Token) IsEOF() bool  { return t.Typ == TEOF }
 
-type tokenTyp int
+type TokenTyp int
 
 const (
-	_ tokenTyp = iota
-	ttOpen
-	ttClose
-	ttNot
-	ttAnd
-	ttOr
-	ttLiteral
-	ttEOF
+	_ TokenTyp = iota
+	TOpen
+	TClose
+	TNot
+	TAnd
+	TOr
+	TLiteral
+	TEOF
 )
 
-func (t tokenTyp) String() string {
-	switch t {
-	case ttOpen:
-		return "ttOpen"
-	case ttClose:
-		return "ttClose"
-	case ttNot:
-		return "ttNot"
-	case ttAnd:
-		return "ttAnd"
-	case ttOr:
-		return "ttOr"
-	case ttLiteral:
-		return "ttLiteral"
-	case ttEOF:
-		return "ttEOF"
-	}
-	return fmt.Sprintf("TokenTyp(%d)", int(t))
+// A StringLexer tokenizes an input string.
+type StringLexer struct {
+	tokens []Token
 }
 
-// A stringLexer tokenizes an input string.
-type stringLexer struct {
-	tokens []token
-}
-
-func newStringLexer(input string) (*stringLexer, error) {
-	var tokens []token
+func NewStringLexer(input string) (*StringLexer, error) {
+	var tokens []Token
 	var rbuf rstack
 	var inEscape bool
 	var inLiteral bool
@@ -75,7 +55,7 @@ func newStringLexer(input string) (*stringLexer, error) {
 			switch r {
 			case '/':
 				inLiteral = false
-				tokens = append(tokens, token{ttLiteral, rbuf.pop()})
+				tokens = append(tokens, Token{TLiteral, rbuf.pop()})
 			case '\\':
 				inEscape = true
 			default:
@@ -89,11 +69,11 @@ func newStringLexer(input string) (*stringLexer, error) {
 					text := rbuf.pop()
 					switch text {
 					case "NOT":
-						tokens = append(tokens, token{ttNot, ""})
+						tokens = append(tokens, Token{TNot, ""})
 					case "AND":
-						tokens = append(tokens, token{ttAnd, ""})
+						tokens = append(tokens, Token{TAnd, ""})
 					case "OR":
-						tokens = append(tokens, token{ttOr, ""})
+						tokens = append(tokens, Token{TOr, ""})
 					default:
 						return nil, fmt.Errorf("unknown operator %q", text)
 					}
@@ -103,9 +83,9 @@ func newStringLexer(input string) (*stringLexer, error) {
 			case ' ':
 				// space character are separators but carry no meaning
 			case '(':
-				tokens = append(tokens, token{ttOpen, ""})
+				tokens = append(tokens, Token{TOpen, ""})
 			case ')':
-				tokens = append(tokens, token{ttClose, ""})
+				tokens = append(tokens, Token{TClose, ""})
 			case '/':
 				inLiteral = true
 			default:
@@ -121,21 +101,21 @@ func newStringLexer(input string) (*stringLexer, error) {
 		text := rbuf.pop()
 		switch text {
 		case "NOT":
-			tokens = append(tokens, token{ttNot, ""})
+			tokens = append(tokens, Token{TNot, ""})
 		case "AND":
-			tokens = append(tokens, token{ttAnd, ""})
+			tokens = append(tokens, Token{TAnd, ""})
 		case "OR":
-			tokens = append(tokens, token{ttOr, ""})
+			tokens = append(tokens, Token{TOr, ""})
 		default:
 			return nil, fmt.Errorf("unknown operator %q", text)
 		}
 	}
-	return &stringLexer{tokens}, nil
+	return &StringLexer{tokens}, nil
 }
 
-func (l *stringLexer) nextToken() (token, error) {
+func (l *StringLexer) NextToken() (Token, error) {
 	if len(l.tokens) == 0 {
-		return token{ttEOF, ""}, nil
+		return Token{TEOF, ""}, nil
 	}
 	t := l.tokens[0]
 	l.tokens = l.tokens[1:]

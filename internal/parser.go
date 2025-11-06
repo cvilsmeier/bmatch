@@ -1,4 +1,4 @@
-package bmatch
+package internal
 
 import (
 	"fmt"
@@ -7,73 +7,60 @@ import (
 
 // Parse input tokens and build an abstract syntax tree.
 // It's a L-R parser with a one-token lookahead.
-func parse(lex lexer) (node, error) {
+func Parse(lex Lexer) (Node, error) {
 	stack := &stack{nil}
-	lookahead, err := lex.nextToken()
+	lookahead, err := lex.NextToken()
 	if err != nil {
-		return node{}, err
+		return Node{}, err
 	}
-	if lookahead.isEOF() {
+	if lookahead.IsEOF() {
 		// fast path for empty input: match empty regex (in other words: match exerything)
-		return node{ntLiteral, "", nil}, nil
+		return Node{LiteralNode, "", nil}, nil
 	}
 	const maxTokens = 1000 // prevent endless loop
 	for range maxTokens {
 		// process next token
 		token := lookahead
-		lookahead, err = lex.nextToken()
+		lookahead, err = lex.NextToken()
 		if err != nil {
-			return node{}, err
+			return Node{}, err
 		}
 		// shift (push token onto stack)
 		stack.push(token)
 		// reduce (build nodes from stack)
 		stack.reduce(lookahead)
 		// did it terminate?
-		if lookahead.typ == ttEOF {
+		if lookahead.Typ == TEOF {
 			if stack.len() == 1 {
 				item := stack.first()
 				if item.isNode() {
 					return item.node, nil
 				}
 			}
-			return node{}, fmt.Errorf("syntax error")
+			return Node{}, fmt.Errorf("syntax error")
 		}
 	}
-	return node{}, fmt.Errorf("too many tokens")
+	return Node{}, fmt.Errorf("too many tokens")
 }
 
-type node struct {
-	typ      nodeTyp
-	text     string
-	subnodes []node
+// A Node is a node in the parse tree.
+type Node struct {
+	Typ      NodeTyp
+	Text     string
+	Subnodes []Node
 }
 
-func (n node) isZero() bool { return int(n.typ) == 0 }
+func (n Node) isZero() bool { return int(n.Typ) == 0 }
 
-type nodeTyp int
+type NodeTyp int
 
 const (
-	_ nodeTyp = iota
-	ntLiteral
-	ntNot
-	ntAnd
-	ntOr
+	_ NodeTyp = iota
+	LiteralNode
+	NotNode
+	AndNode
+	OrNode
 )
-
-func (t nodeTyp) String() string {
-	switch t {
-	case ntLiteral:
-		return "ntLiteral"
-	case ntNot:
-		return "ntNot"
-	case ntAnd:
-		return "ntAnd"
-	case ntOr:
-		return "ntOr"
-	}
-	return fmt.Sprintf("NodeTyp(%d)", int(t))
-}
 
 // A stack holds stack items, which can be tokens or nodes.
 type stack struct {
@@ -88,7 +75,7 @@ func (s *stack) first() stackitem {
 	return s.items[0]
 }
 
-func (s *stack) push(token token) {
+func (s *stack) push(token Token) {
 	s.items = append(s.items, stackitem{token: token})
 }
 
@@ -96,14 +83,17 @@ func (s *stack) push(token token) {
 // following reduction rules:
 //
 //	literal          --> node
+//	"(" node ")"     --> node
 //	"NOT" node       --> node
 //	node "AND" node  --> node
 //	node "OR" node   --> (lookahead "OR", ")", EOF)  -->  node
-//	"(" node ")"     --> node
-func (s *stack) reduce(lookahead token) error {
+func (s *stack) reduce(lookahead Token) error {
 	const maxRounds = 100
 	for range maxRounds {
 		if s.reduceLiteralToken() {
+			continue
+		}
+		if s.reduceOpenCloseToken() {
 			continue
 		}
 		if s.reduceNotToken() {
@@ -115,9 +105,6 @@ func (s *stack) reduce(lookahead token) error {
 		if s.reduceOrToken(lookahead) {
 			continue
 		}
-		if s.reduceOpenCloseToken() {
-			continue
-		}
 		return nil
 	}
 	return fmt.Errorf("too many reduce rounds")
@@ -127,8 +114,8 @@ func (s *stack) reduceLiteralToken() bool {
 	nitems := len(s.items)
 	if nitems >= 1 {
 		item := s.items[nitems-1]
-		if item.isTokenOf(ttLiteral) {
-			newNode := node{typ: ntLiteral, text: item.token.text}
+		if item.isTokenOf(TLiteral) {
+			newNode := Node{Typ: LiteralNode, Text: item.token.Text}
 			s.replaceItems(nitems-1, nitems-1, newNode)
 			return true
 		}
@@ -141,8 +128,8 @@ func (s *stack) reduceNotToken() bool {
 	if nitems >= 2 {
 		i1 := s.items[nitems-2] // NOT
 		i2 := s.items[nitems-1] // node
-		if i1.isTokenOf(ttNot) && i2.isNode() {
-			newNode := node{typ: ntNot, text: i1.token.text, subnodes: []node{i2.node}}
+		if i1.isTokenOf(TNot) && i2.isNode() {
+			newNode := Node{Typ: NotNode, Text: i1.token.Text, Subnodes: []Node{i2.node}}
 			s.replaceItems(nitems-2, nitems, newNode)
 			return true
 		}
@@ -156,8 +143,8 @@ func (s *stack) reduceAndToken() bool {
 		i1 := s.items[nitems-3] // node
 		i2 := s.items[nitems-2] // AND
 		i3 := s.items[nitems-1] // node
-		if i1.isNode() && i2.isTokenOf(ttAnd) && i3.isNode() {
-			newNode := node{typ: ntAnd, text: i2.token.text, subnodes: []node{i1.node, i3.node}}
+		if i1.isNode() && i2.isTokenOf(TAnd) && i3.isNode() {
+			newNode := Node{Typ: AndNode, Text: i2.token.Text, Subnodes: []Node{i1.node, i3.node}}
 			s.replaceItems(nitems-3, nitems, newNode)
 			return true
 		}
@@ -165,16 +152,16 @@ func (s *stack) reduceAndToken() bool {
 	return false
 }
 
-func (s *stack) reduceOrToken(lookahead token) bool {
-	switch lookahead.typ {
-	case ttClose, ttOr, ttEOF:
+func (s *stack) reduceOrToken(lookahead Token) bool {
+	switch lookahead.Typ {
+	case TClose, TOr, TEOF:
 		nitems := len(s.items)
 		if nitems >= 3 {
 			i1 := s.items[nitems-3] // node
 			i2 := s.items[nitems-2] // OR
 			i3 := s.items[nitems-1] // node
-			if i1.isNode() && i2.isTokenOf(ttOr) && i3.isNode() {
-				newNode := node{typ: ntOr, text: i2.token.text, subnodes: []node{i1.node, i3.node}}
+			if i1.isNode() && i2.isTokenOf(TOr) && i3.isNode() {
+				newNode := Node{Typ: OrNode, Text: i2.token.Text, Subnodes: []Node{i1.node, i3.node}}
 				s.replaceItems(nitems-3, nitems, newNode)
 				return true
 			}
@@ -189,7 +176,7 @@ func (s *stack) reduceOpenCloseToken() bool {
 		i1 := s.items[nitems-3] // (
 		i2 := s.items[nitems-2] // node
 		i3 := s.items[nitems-1] // )
-		if i1.isTokenOf(ttOpen) && i2.isNode() && i3.isTokenOf(ttClose) {
+		if i1.isTokenOf(TOpen) && i2.isNode() && i3.isTokenOf(TClose) {
 			s.replaceItems(nitems-3, nitems, i2.node)
 			return true
 		}
@@ -197,7 +184,7 @@ func (s *stack) reduceOpenCloseToken() bool {
 	return false
 }
 
-func (s *stack) replaceItems(from, to int, node node) {
+func (s *stack) replaceItems(from, to int, node Node) {
 	if from != to {
 		s.items = slices.Delete(s.items, from+1, to)
 	}
@@ -206,10 +193,10 @@ func (s *stack) replaceItems(from, to int, node node) {
 
 // A stack item holds either a token or a node.
 type stackitem struct {
-	token token
-	node  node
+	token Token
+	node  Node
 }
 
-func (si stackitem) isToken() bool               { return !si.token.isZero() }
-func (si stackitem) isTokenOf(typ tokenTyp) bool { return si.isToken() && si.token.typ == typ }
+func (si stackitem) isToken() bool               { return !si.token.IsZero() }
+func (si stackitem) isTokenOf(typ TokenTyp) bool { return si.isToken() && si.token.Typ == typ }
 func (si stackitem) isNode() bool                { return !si.node.isZero() }

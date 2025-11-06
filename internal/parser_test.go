@@ -1,4 +1,4 @@
-package bmatch
+package internal
 
 import (
 	"strings"
@@ -10,7 +10,7 @@ func TestParse(t *testing.T) {
 		input string
 		want  string
 	}
-	is := assert(t)
+	is := Assert(t)
 	for _, tt := range []testcase{
 		// the empty expression
 		{"", ""},
@@ -88,37 +88,37 @@ func TestParse(t *testing.T) {
 	} {
 		t.Logf("testcase '%s'", tt.input)
 		lex := newFakeLexer(tt.input)
-		node, err := parse(lex)
+		node, err := Parse(lex)
 		want := strings.TrimSpace(tt.want)
 		if strings.HasPrefix(want, "err: ") {
 			if err == nil {
-				is.failf("testcase '%s': want err but was ok", tt.input)
+				is.Failf("testcase '%s': want err but was ok", tt.input)
 			}
 			want := want[5:]
 			have := err.Error()
 			if have != want {
-				is.failf("testcase '%s'\nwant error '%s'\nhave error '%s'", tt.input, want, have)
+				is.Failf("testcase '%s'\nwant error '%s'\nhave error '%s'", tt.input, want, have)
 			}
 		} else {
 			if err != nil {
-				is.failf("testcase '%s': want ok but have error %s", tt.input, err)
+				is.Failf("testcase '%s': want ok but have error %s", tt.input, err)
 			}
 			have := dumpNode(0, node)
 			if have != want {
-				is.failf("testcase '%s'\nwant %q\nhave %q", tt.input, want, have)
+				is.Failf("testcase '%s'\nwant %q\nhave %q", tt.input, want, have)
 			}
 		}
 	}
 }
 
-func dumpNode(level int, node node) string {
+func dumpNode(level int, node Node) string {
 	if level > 100 {
 		panic("dumpNode: too deep")
 	}
-	str := node.text
-	if len(node.subnodes) > 0 {
+	str := node.Text
+	if len(node.Subnodes) > 0 {
 		str += "["
-		for i, child := range node.subnodes {
+		for i, child := range node.Subnodes {
 			if i > 0 {
 				str += ","
 			}
@@ -142,26 +142,26 @@ func newFakeLexer(input string) *fakeLexer {
 	return &fakeLexer{toks}
 }
 
-func (l *fakeLexer) nextToken() (token, error) {
+func (l *fakeLexer) NextToken() (Token, error) {
 	if len(l.toks) == 0 {
-		return token{ttEOF, "EOF"}, nil
+		return Token{TEOF, "EOF"}, nil
 	}
 	tok := l.toks[0]
 	l.toks = l.toks[1:]
 	switch tok {
 	case "(":
-		return token{ttOpen, "("}, nil
+		return Token{TOpen, "("}, nil
 	case ")":
-		return token{ttClose, ")"}, nil
+		return Token{TClose, ")"}, nil
 	case "NOT":
-		return token{ttNot, "NOT"}, nil
+		return Token{TNot, "NOT"}, nil
 	case "AND":
-		return token{ttAnd, "AND"}, nil
+		return Token{TAnd, "AND"}, nil
 	case "OR":
-		return token{ttOr, "OR"}, nil
+		return Token{TOr, "OR"}, nil
 	}
 	if len(tok) == 0 {
 		panic("cannot have empty literal token")
 	}
-	return token{ttLiteral, tok}, nil
+	return Token{TLiteral, tok}, nil
 }

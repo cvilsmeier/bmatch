@@ -1,4 +1,4 @@
-package bmatch
+package internal
 
 import (
 	"strings"
@@ -68,8 +68,8 @@ func TestStringLexer(t *testing.T) {
 		{"combi_07", "(/a/ OR /b/) AND ( /c/ AND NOT /d/ )", "   (, 'a', OR, 'b', ), AND, (, 'c', AND, NOT, 'd', ), EOF"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			is := assert(t)
-			lex, err := newStringLexer(tt.input)
+			is := Assert(t)
+			lex, err := NewStringLexer(tt.input)
 			want := strings.TrimSpace(tt.want)
 			var have string
 			if err != nil {
@@ -78,33 +78,33 @@ func TestStringLexer(t *testing.T) {
 				have = collectAndDumpForTest(lex)
 			}
 			if have != want {
-				is.eq(want, have)
+				is.Eq(want, have)
 			}
 		})
 	}
 }
 
-func collectAndDumpForTest(lex lexer) string {
+func collectAndDumpForTest(lex Lexer) string {
 	var toks []string
 	for range 100 {
-		t, err := lex.nextToken()
+		t, err := lex.NextToken()
 		if err != nil {
 			panic("unexpected err in nextToken()")
 		}
-		switch t.typ {
-		case ttOpen:
+		switch t.Typ {
+		case TOpen:
 			toks = append(toks, "(")
-		case ttClose:
+		case TClose:
 			toks = append(toks, ")")
-		case ttNot:
+		case TNot:
 			toks = append(toks, "NOT")
-		case ttAnd:
+		case TAnd:
 			toks = append(toks, "AND")
-		case ttOr:
+		case TOr:
 			toks = append(toks, "OR")
-		case ttLiteral:
-			toks = append(toks, "'"+t.text+"'")
-		case ttEOF:
+		case TLiteral:
+			toks = append(toks, "'"+t.Text+"'")
+		case TEOF:
 			toks = append(toks, "EOF")
 			return strings.Join(toks, ", ")
 		default:

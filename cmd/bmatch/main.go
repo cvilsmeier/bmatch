@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/cvilsmeier/bmatch"
 )
@@ -27,6 +28,9 @@ func usage() {
 	fmt.Println("    -explain")
 	fmt.Println("            Print expression tree and exit.")
 	fmt.Println("            Useful for hunting down shell escaping issues.")
+	fmt.Println("    -lower")
+	fmt.Println("            Convert all input lines to lowercase before matching.")
+	fmt.Println("            Useful for ignoring case.")
 	fmt.Println("    -help")
 	fmt.Println("            Print this help page and exit")
 	fmt.Println("")
@@ -35,8 +39,10 @@ func usage() {
 
 func main() {
 	var explain bool
+	var lower bool
 	flag.Usage = usage
 	flag.BoolVar(&explain, "explain", explain, "")
+	flag.BoolVar(&lower, "lower", lower, "")
 	flag.Parse()
 	if flag.NArg() == 0 {
 		fmt.Println("Usage: bmatch [flags] expr [file]...")
@@ -62,29 +68,29 @@ func main() {
 		return
 	}
 	if flag.NArg() == 1 {
-		matchReader(os.Stdin, matcher)
+		matchReader(os.Stdin, matcher, lower)
 	}
 	for i := range flag.NArg() - 1 {
 		filename := flag.Arg(i + 1)
-		matchFile(filename, matcher)
+		matchFile(filename, matcher, lower)
 	}
 }
 
-func matchFile(filename string, matcher bmatch.Matcher) {
+func matchFile(filename string, matcher bmatch.Matcher, lower bool) {
 	f, err := os.Open(filename)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		return
 	}
 	defer f.Close()
-	matchReader(f, matcher)
+	matchReader(f, matcher, lower)
 }
 
-func matchReader(r io.Reader, matcher bmatch.Matcher) {
+func matchReader(r io.Reader, matcher bmatch.Matcher, lower bool) {
 	sca := bufio.NewScanner(r)
 	for sca.Scan() {
 		line := sca.Text()
-		if matcher.Match(line) {
+		if matchLine(line, matcher, lower) {
 			fmt.Println(line)
 		}
 	}
@@ -94,4 +100,11 @@ func matchReader(r io.Reader, matcher bmatch.Matcher) {
 			fmt.Fprintf(os.Stderr, "%s\n", err)
 		}
 	}
+}
+
+func matchLine(line string, matcher bmatch.Matcher, lower bool) bool {
+	if lower {
+		line = strings.ToLower(line)
+	}
+	return matcher.Match(line)
 }

@@ -4,10 +4,10 @@
 [![Build Status](https://github.com/cvilsmeier/bmatch/actions/workflows/build.yml/badge.svg)](https://github.com/cvilsmeier/bmatch/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Bmatch is a Go (golang) string matching package and command line tool
-that supports grouping and boolean expressions:
+Bmatch is a Go (golang) string matching package and command line tool that
+supports boolean expressions:
 
-    /DEBUG/ OR ( /TRACE/ AND NOT /TRACE.*sql/ )
+    /debug/ OR ( /trace/ AND NOT /trace.*sql/ )
 
 The expression syntax is (whitespace ignored for simplicity):
 
@@ -24,10 +24,12 @@ The expression syntax is (whitespace ignored for simplicity):
 
 The operator precedence is the same as in C (the programming language):
 
-    - group <-- highest precedence
-    - NOT
+    - NOT   <-- highest precedence
     - AND
     - OR    <-- lowest precedence
+
+The precedence can be changed by using parentheses.
+
 
 
 ## Usage
@@ -54,7 +56,7 @@ go install github.com/cvilsmeier/bmatch/cmd/bmatch@latest
 ~~~
 
 ~~~
-$ bmatch - a string matcher with grouping and boolean expressions
+$ bmatch - a string matcher with boolean expressions
 
 Usage:
 

@@ -14,7 +14,7 @@ import (
 )
 
 func usage() {
-	fmt.Println("bmatch - a string matcher with grouping and boolean expressions")
+	fmt.Println("bmatch - a string matcher with boolean expressions")
 	fmt.Println("")
 	fmt.Println("Usage:")
 	fmt.Println("")

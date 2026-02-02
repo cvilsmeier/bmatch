@@ -9,20 +9,20 @@ supports boolean expressions. Here are some examples:
 
     debug OR ( trace AND NOT sql )
 
-        Matches all "debug" or "trace" lines, but leaves out "sql" lines.
+Matches all "debug" or "trace" lines, but leaves out "sql" lines.
 
     little\ cat AND big\ dog
 
-        Matches all lines that contain "little cat" and "big dog". Note escaping.
+Matches all lines that contain "little cat" and "big dog". Note the escaping of space characters.
 
     one OR two AND three
 
-        Matches all lines that contain either "one" or "two" and "three".
-        The AND operator is stronger that the OR operator.
+Matches all lines that contain either "one" or "two" and "three".
+The AND operator is stronger that the OR operator.
 
     two AND three OR one
 
-        Matches the same lines as the previous example.
+Matches the same lines as the previous example.
 
 
 The expression syntax is (whitespace ignored for simplicity):

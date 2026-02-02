@@ -5,9 +5,25 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Bmatch is a Go (golang) string matching package and command line tool that
-supports boolean expressions:
+supports boolean expressions. Here are some examples:
 
-    /debug/ OR ( /trace/ AND NOT /trace.*sql/ )
+    debug OR ( trace AND NOT sql )
+
+        Matches all "debug" or "trace" lines, but leaves out "sql" lines.
+
+    little\ cat AND big\ dog
+
+        Matches all lines that contain "little cat" and "big dog". Note escaping.
+
+    one OR two AND three
+
+        Matches all lines that contain either "one" or "two" and "three".
+        The AND operator is stronger that the OR operator.
+
+    two AND three OR one
+
+        Matches the same lines as the previous example.
+
 
 The expression syntax is (whitespace ignored for simplicity):
 
@@ -17,10 +33,10 @@ The expression syntax is (whitespace ignored for simplicity):
     <notExpr>       ::=  "NOT" <expr>
     <andExpr>       ::=  <expr> "AND" <expr>
     <orExpr>        ::=  <expr> "OR" expr
-    <literal>       ::=  <stringLiteral> || <regexLiteral>
-    <stringLiteral> ::=  ? any character string not enclosed in "/" characters ?
+    <literal>       ::=  <stringLiteral> | <regexLiteral>
+    <stringLiteral> ::=  ? Any character string. Note that special characters like space must be escaped. ?
     <regexLiteral>  ::=  "/" <regex> "/"
-    <regex>         ::=  ? any valid golang regex ?
+    <regex>         ::=  ? Any valid golang regex, see https://pkg.go.dev/regexp/syntax ?
 
 The operator precedence is the same as in C (the programming language):
 
